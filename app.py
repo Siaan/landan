@@ -23,10 +23,9 @@ mongo = PyMongo(app)
 @app.route('/')
 def index():
     if session.get('logged_in'):
+        return render_template('explore3.html', name=session['username'])
 
-        return render_template('loggedIndex.html', name=session['username'])
-
-    return render_template('index.html')
+    return render_template('login.html')
 
 # @app.route('/')
 # def index():
@@ -73,12 +72,15 @@ def login():
 def logout():
     session.clear()
     session['logged_in']=False
-    return redirect(url_for('index'))
+    return redirect(url_for('login'))
 
 @app.route('/about')
 def about():
     return render_template('about.html')
 
+@app.route('/voronoi')
+def vornoi():
+    return render_template('voronoi2.html')
 
 if __name__ == '__main__':
     app.run('0.0.0.0',debug=True)
