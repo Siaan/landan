@@ -129,7 +129,7 @@
 	var map;
 	var sidebarClosed = false;
 	var API_KEY = "c5ffff1a95a4ab5a9e440d76ad56f247";
-	var photos;
+	var photos,photosInfo = [];
 
 	//Initiallize map with user's current location
 	if (navigator.geolocation) {
@@ -154,7 +154,7 @@
           center: location,
         });
 
-        map.addListener('resize', function() {
+        map.addListener('zoom_changed', function() {
         	updateMap();
 		});
 
@@ -210,15 +210,15 @@
 
 		request.onload = function(){
 			let data = JSON.parse(this.response);
-			let imagePage = "https://www.flickr.com/photos/" + data.photo.owner.nsid + "/"+ image.photoID +"/in/feed";
+			let imagePage = "https://www.flickr.com/photos/" + data.photo.owner.nsid + "/"+ data.photo.id +"/in/feed";
 			let imageSource = "'https://farm" + data.photo.farm+".staticflickr.com/"+
 			data.photo.server + "/" + data.photo.id + "_" + data.photo.secret+".jpg'";
 			if(showInPreview){
 				images.innerHTML += 
 				"<div class=\"image-container\" onclick=\"window.open('" + imagePage + "','mywindow');\">" + 
-				"<img id='" + image.photoID +
-				"'class=\"image-preview\" src=" + imageSource + ">" +  
-				"<div class=\"image-overlay\">" + 
+				"<img id='" + data.photo.id +
+				"'class=\"image-preview\" onmouseover=\"handleImageMouseOver(this)\" src=" + imageSource + ">" +  
+				"<div onmouseover=\"handleImageMouseOver(this) class=\"image-overlay\">" + 
 				"<p style=\"font-size:15px; margin:2px;\">" +
 				data.photo.owner.username + "</p>" + 
 				"<p style=\"font-size:12px; margin:2px;\">" +
@@ -226,33 +226,30 @@
 				"</div>" +
 				"</div>";
 			}
-
-			// let latlngdata = {
-			// 	lat: parseFloat(data.photo.location.latitude),
-			// 	lng: parseFloat(data.photo.location.longitude)
-			// };
-
-			// console.log(latlngdata);
-
-			// let point = new google.maps.Circle({
-			// 	strokeColor: '#FF0000',
-			// 	strokeOpacity: 0.8,
-			// 	strokeWeight: 2,
-			// 	fillColor: '#FF0000',
-			// 	fillOpacity: 0.35,
-			// 	map: map,
-			// 	center: latlngdata,
-			// 	radius: 1000
-			// });
-
-			new google.maps.Marker({
-			    position: new google.maps.LatLng(parseFloat(data.photo.location.latitude),parseFloat(data.photo.location.longitude)),
-			    map: map,
-			    title: 'Hello World!'
-			});
+			photosInfo.push(data);
 		}
-
 		request.send();
+	}
+
+	function handleImageMouseOver(htmlElement){
+		drawMarker(photosInfo[photosInfo.findIndex(x => x.photo.id === htmlElement.id)]);
+	}
+	
+
+	function drawMarker(data){
+		let latLng = new google.maps.LatLng(parseFloat(data.photo.location.latitude),parseFloat(data.photo.location.longitude));
+		let point = new google.maps.Circle({
+			strokeColor: '#FF0000',
+			strokeOpacity: 0.8,
+			strokeWeight: 2,
+			fillColor: '#FF0000',
+			fillOpacity: 0.35,
+			map: map,
+			center: latLng,
+			radius: 1000
+		});
+
+		console.log("created marker at " + latLng);
 	}
 
 	function search(){
@@ -280,6 +277,7 @@
 		}
 	}
 
+	
 </script>
 <body>
 
