@@ -17,9 +17,7 @@
 
 	#navbar {
 		position: absolute;
-		width: 30%;
-		max-width: 300px;
-		min-width: 200px;
+		width: 400px;
 		height: 100%;
 		text-align: center;
 		margin: 0;
@@ -28,27 +26,36 @@
 		box-shadow: 0px 1px 5px grey;
 		z-index: 999;
 		background-color: white;
-		padding: 10px;
 	}
 
 	#image-preview {
 		width:100%;
 	}
 
-	#navbar-button{
+	#navbar-button {
 		height: 30px;
 		width: 30px;
 	}
 
-	.container{
+	#top-navbar-container {
 		display: flex;
 		justify-content: space-around;
+		align-items: center;
+	}
+
+	#search-bar {
+		width: 280px;
+		border: 0px;
+		padding:10px;
 	}
 </style>
 </head>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAF1LsdlbXpfEI1sx8WK4VqvMpbsKowHRE&libraries=visualization&callback=initMap" type="text/javascript"> </script>
 <div id="navbar">
-	<img id="navbar-button" src="http://www.contentformula.com/blog/wp-content/uploads/2016/06/hamburger-menu.png" onclick="handleSideBar()" />
+	<div id="top-navbar-container">
+		<img id="navbar-button" src="http://www.contentformula.com/blog/wp-content/uploads/2016/06/hamburger-menu.png" onclick="handleSideBar()" />
+		<input id="search-bar" type="text" name="location" placeholder="enter a location..."><br>
+	</div>
 	<div id="image-preview"></div>
 </div>
 <div id="map"></div>
@@ -166,8 +173,8 @@
 		}
 	}
 
-	function showImage(photo,images){
-		let url = 'https://farm'+photo.farm+'.staticflickr.com/'+photo.server+'/'+photo.photoID+'_'+photo.secret+'.jpg';
+	function showImage(image,images){
+		let url = 'https://farm'+image.farm+'.staticflickr.com/'+image.server+'/'+image.photoID+'_'+image.secret+'.jpg';
 		images.innerHTML += "<img width=\"100%\" src='" + url + "'>";
 	}
 
@@ -177,14 +184,12 @@
 
 		console.log(sidebarClosed);
 		if(sidebarClosed){
-			navbar.width = '30%';
-			navbar.minWidth = '200px';
+			navbar.width = '400px';
 			images.display = 'flex';
 			sidebarClosed = false;
 		}else{
 			navbar.width = '40px';
 			images.display = 'none';
-			navbar.minWidth = '40px';
 			sidebarClosed = true;
 		}
 		
