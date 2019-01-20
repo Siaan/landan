@@ -56,7 +56,6 @@
 		width: 260px;
 		border: 0px;
 		padding:10px;
-		color: #dddddd;
 	}
 
 	#search-submit {
@@ -130,6 +129,7 @@
 	var sidebarClosed = false;
 	var API_KEY = "c5ffff1a95a4ab5a9e440d76ad56f247";
 	var photos,photosInfo = [];
+	var markers = [];
 
 	//Initiallize map with user's current location
 	if (navigator.geolocation) {
@@ -138,15 +138,18 @@
 		document.getElementById("map").innerHTML = "Geolocation is not supported by this browser.";
 	}
 
-	function initMap(position){
+	function initMap(position,locationObject){
 		//defaults to center of America
-		let location = position ? { 
+		let location = locationObject;
+		if (location === undefined){
+			location = position ? { 
 				lat: position.coords.latitude,
 				lng: position.coords.longitude
 			} : {
 				lat: 41.850033, 
 				lng: -87.6500523
 			}; 
+		}
 		
 		map = new google.maps.Map(document.getElementById('map'), {
           zoom: 15,
@@ -155,16 +158,18 @@
         });
 
         map.addListener('zoom_changed', function() {
-        	updateMap();
+        	updateMap(map);
 		});
-
-        updateMap();
 	}
 
-	function updateMap(){
+	function updateMap(map){
+		console.log('updating map');
 		if(map){
 			let bounds = map.getBounds();
-
+			photos = [];
+			photosInfo = [];
+			markers = [];
+			setMapOnAll(null);
 			//JSON Object to send to server
 			if(bounds) {
 				let bbox = {
@@ -174,14 +179,11 @@
 		    		max_lat: bounds.ga.l
 		    	};
 
-
 		    	let locations = getPhotoData(bbox);
 		    }
 	    }
 	}
 
-
-	//TODO
 	function getPhotoData(bbox){
 		const request = new XMLHttpRequest();
 		const requestURL = "https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+ API_KEY +"&bbox="+ bbox.min_lng +"%2C" + bbox.min_lat + "%2C" + bbox.max_lng + "%2C"+ bbox.max_lat +"&has_geo=1&format=json&nojsoncallback=1";
@@ -189,7 +191,6 @@
 		
 		request.onload = function(){
 			photos = JSON.parse(this.response).photos.photo;
-			console.log("fetched " + photos.length + " photos");
 			handlePhotos(photos);
 		}
 		request.send();
@@ -217,8 +218,8 @@
 				images.innerHTML += 
 				"<div class=\"image-container\" onclick=\"window.open('" + imagePage + "','mywindow');\">" + 
 				"<img id='" + data.photo.id +
-				"'class=\"image-preview\" onmouseover=\"handleImageMouseOver(this)\" src=" + imageSource + ">" +  
-				"<div onmouseover=\"handleImageMouseOver(this) class=\"image-overlay\">" + 
+				"'class=\"image-preview\" src=" + imageSource + ">" +  
+				"<div class=\"image-overlay\">" + 
 				"<p style=\"font-size:15px; margin:2px;\">" +
 				data.photo.owner.username + "</p>" + 
 				"<p style=\"font-size:12px; margin:2px;\">" +
@@ -227,18 +228,21 @@
 				"</div>";
 			}
 			photosInfo.push(data);
+			drawMarker(data,map);
 		}
 		request.send();
 	}
 
 	function handleImageMouseOver(htmlElement){
-		drawMarker(photosInfo[photosInfo.findIndex(x => x.photo.id === htmlElement.id)]);
+		console.log(photosInfo[photosInfo.findIndex(x => x.photo.id === htmlElement.id)]);
 	}
-	
 
-	function drawMarker(data){
-		let latLng = new google.maps.LatLng(parseFloat(data.photo.location.latitude),parseFloat(data.photo.location.longitude));
-		let point = new google.maps.Circle({
+	function drawMarker(data,map){
+		let latLng = new google.maps.LatLng(parseFloat(data.photo.location.longitude),parseFloat(data.photo.location.latitude));
+
+		let markerRadius = 15000/Math.pow(map.getZoom(),2);
+		console.log(markerRadius);
+		let marker = new google.maps.Circle({
 			strokeColor: '#FF0000',
 			strokeOpacity: 0.8,
 			strokeWeight: 2,
@@ -246,15 +250,32 @@
 			fillOpacity: 0.35,
 			map: map,
 			center: latLng,
-			radius: 1000
+			radius: markerRadius,
 		});
 
-		console.log("created marker at " + latLng);
+        markers.push(marker);
+
+		setMapOnAll(map);
+		
 	}
 
+	function setMapOnAll(map) {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(map);
+        }
+    }
+
 	function search(){
-		console.log(document.getElementById("search-bar").value);
-		//TODO
+		let geocoder = new google.maps.Geocoder();
+		let address = document.getElementById("search-bar").value;
+		geocoder.geocode({ 'address': address }, function (results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                let latitude = results[0].geometry.location.lat();
+                let longitude = results[0].geometry.location.lng();
+                let newCenter = new google.maps.LatLng(latitude,longitude);
+                initMap(null,newCenter);
+            }
+        });
 	}
 
 	function handleSideBar(){
