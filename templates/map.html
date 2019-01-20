@@ -37,6 +37,10 @@
 		width: 30px;
 	}
 
+	#navbar-button:hover {
+		cursor: pointer;
+	}
+
 	#top-navbar-container {
 		display: flex;
 		justify-content: space-around;
@@ -44,9 +48,33 @@
 	}
 
 	#search-bar {
-		width: 280px;
+		width: 260px;
 		border: 0px;
 		padding:10px;
+	}
+
+	#search-submit {
+		background-color: white;
+		padding: 3px;
+		border-radius: 20px;
+		height:30px;
+		width: 30px;
+	}
+
+	#search-submit:hover {
+		background-color: #EEEEEE;
+		cursor: pointer;
+	}
+
+	.image-overlay {
+		font-family: Raleway, sans-serif;
+		color: black;
+		text-align: left;
+		padding: 5px;
+	}
+
+	.image-container {
+		text-decoration: none;
 	}
 </style>
 </head>
@@ -55,6 +83,7 @@
 	<div id="top-navbar-container">
 		<img id="navbar-button" src="http://www.contentformula.com/blog/wp-content/uploads/2016/06/hamburger-menu.png" onclick="handleSideBar()" />
 		<input id="search-bar" type="text" name="location" placeholder="enter a location..."><br>
+		<img id="search-submit" src="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-ios7-search-strong-128.png" onclick="search()" />
 	</div>
 	<div id="image-preview"></div>
 </div>
@@ -62,7 +91,6 @@
 <script type="text/javascript">
 	var map;
 	var sidebarClosed = false;
-
 	//Initiallize map with user's current location
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(initMap);
@@ -104,7 +132,7 @@
         	};
 
         	//send to server
-        	console.log(frameInfo);
+        	//TODO
 
         	//get the data
 	        let locations = getLocationData();
@@ -147,6 +175,7 @@
 		let images = document.getElementById("image-preview");
 		images.innerHTML = null;
 		for(let i = 0; i < test.length; i++){
+
 			let location = {
 				lat: test[i].lat,
 				lng: test[i].lng
@@ -163,36 +192,63 @@
 				radius: 50
 			});
 
-			// var marker = new google.maps.Marker({
-			// 	position: location,
-			// 	icon: 'http://www.get-emoji.com/images/emoji/1f534.png',
-			// 	map: map,
-			// 	size: 20
-			// });
-			showImage(test[i],images);
+			handleImage(test[i],images);
 		}
 	}
 
-	function showImage(image,images){
-		let url = 'https://farm'+image.farm+'.staticflickr.com/'+image.server+'/'+image.photoID+'_'+image.secret+'.jpg';
-		images.innerHTML += "<img width=\"100%\" src='" + url + "'>";
+	function handleImage(image,images){
+		//get information about photo
+		let url = "https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=c5ffff1a95a4ab5a9e440d76ad56f247&photo_id=" + image.photoID + "&secret=" + image.secret + "&format=json&nojsoncallback=1";
+
+		let request = new XMLHttpRequest();
+		request.open('GET',url,true);
+
+		request.onload = function(){
+			let data = JSON.parse(this.response);
+
+			let imageSource = "https://www.flickr.com/photos/" + data.photo.owner.nsid + "/"+ image.photoID +"/in/feed";
+			images.innerHTML += 
+			"<a class=\"image-container\" href=\"" + imageSource +
+			"\"target=\"_blank\"><img id='" + image.photoID +
+			"'width=\"100%\" src='https://farm" + 
+			image.farm+'.staticflickr.com/'+
+			image.server+'/'+image.photoID+'_'+
+			image.secret+'.jpg' + "'>" +  
+			"<div class=\"image-overlay\"><p style=\"font-size:15px;margin:2px;\">" +
+			data.photo.owner.username + "</p><p style=\"font-size:12px;margin:2px;\">" +
+			data.photo.title._content +
+			"</p></div>" +
+			"</a>";
+		}
+
+		request.send();
+	}
+
+	function search(){
+		console.log(document.getElementById("search-bar").value);
+		//TODO
 	}
 
 	function handleSideBar(){
 		let navbar = document.getElementById("navbar").style;
 		let images = document.getElementById("image-preview").style;
+		let searchBar = document.getElementById("search-bar").style;
+		let searchSubmit = document.getElementById("search-submit").style;
 
 		console.log(sidebarClosed);
 		if(sidebarClosed){
 			navbar.width = '400px';
 			images.display = 'flex';
+			searchBar.display = 'block';
+			searchSubmit.display = 'block';
 			sidebarClosed = false;
 		}else{
 			navbar.width = '40px';
 			images.display = 'none';
+			searchBar.display = 'none';
+			searchSubmit.display = 'none';
 			sidebarClosed = true;
 		}
-		
 	}
 
 </script>
