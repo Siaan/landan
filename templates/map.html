@@ -26,9 +26,12 @@
 		box-shadow: 0px 1px 5px grey;
 		z-index: 999;
 		background-color: white;
+		transition-timing-function: ease-out;
+		-webkit-transition: width 0.3s;
+		transition: width 0.3s;
 	}
 
-	#image-preview {
+	#images-panel {
 		width:100%;
 	}
 
@@ -51,6 +54,7 @@
 		width: 260px;
 		border: 0px;
 		padding:10px;
+		color: #dddddd;
 	}
 
 	#search-submit {
@@ -70,11 +74,33 @@
 		font-family: Raleway, sans-serif;
 		color: black;
 		text-align: left;
-		padding: 5px;
+		background: rgba(0,0,0,0.3);
+		position: absolute;
+		bottom: 0px;
+		right: 0px;
+		width: 100%;
+		height: 100%;
+		color: white;
+		opacity: 0;
+		transition-timing-function: ease-out;
+		-webkit-transition: opacity 0.4s;
+		transition: opacity 0.4s;
+	}
+
+	.image-overlay:hover {
+		opacity: 1;
 	}
 
 	.image-container {
 		text-decoration: none;
+		position: relative;
+		cursor: pointer;
+	}
+
+	.image-preview {
+		width: 100%;
+		height: auto;
+		vertical-align: middle;
 	}
 </style>
 </head>
@@ -82,15 +108,19 @@
 <div id="navbar">
 	<div id="top-navbar-container">
 		<img id="navbar-button" src="http://www.contentformula.com/blog/wp-content/uploads/2016/06/hamburger-menu.png" onclick="handleSideBar()" />
-		<input id="search-bar" type="text" name="location" placeholder="enter a location..."><br>
+		<input id="search-bar" type="text" name="location" placeholder="Enter a Location..."><br>
 		<img id="search-submit" src="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-ios7-search-strong-128.png" onclick="search()" />
 	</div>
-	<div id="image-preview"></div>
+	<div id="images-panel"></div>
+	<button onclick="updateMap()">Update</button>
 </div>
 <div id="map"></div>
 <script type="text/javascript">
 	var map;
 	var sidebarClosed = false;
+	var API_KEY = "c5ffff1a95a4ab5a9e440d76ad56f247";
+	var photos;
+
 	//Initiallize map with user's current location
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(initMap);
@@ -99,126 +129,113 @@
 	}
 
 	function initMap(position){
-		let location = {lat: 41.850033, lng: -87.6500523}; //defaults to center of America
-		if(position){
-			location = {
+		//defaults to center of America
+		let location = position ? { 
 				lat: position.coords.latitude,
 				lng: position.coords.longitude
-			};
-		}
+			} : {
+				lat: 41.850033, 
+				lng: -87.6500523
+			}; 
 		
 		map = new google.maps.Map(document.getElementById('map'), {
           zoom: 15,
           center: location,
         });
 
-        google.maps.event.addListener(map, 'bounds_changed', function() {
-        	let bounds = map.getBounds();
-
-        	//JSON Object to send to server
-        	let halfWidth = bounds.ga.l - bounds.ga.j;
-        	let halfHeight = bounds.ma.l - bounds.ma.j
-        	let center = map.getCenter();
-
-        	let centerPoint = {
-        		lat: center.lat(),
-        		lng: center.lng()
-        	}
-
-        	let frameInfo = {
-        		center: centerPoint,
-        		halfWidth: halfWidth,
-        		halfHeight: halfHeight
-        	};
-
-        	//send to server
-        	//TODO
-
-        	//get the data
-	        let locations = getLocationData();
-	        drawMarkers(locations);
-        }); 
+        updateMap();
 	}
 
-	// google.maps.event.addListener(map, 'bounds_changed', function(){
-	// 	var bounds =  map.getBounds();
-	// 	let ne = bounds.getNorthEast();
-	// 	let sw = bounds.getSouthWest();
-	// 	console.log(ne);
-	// 	console.log(sw);
-	// });
+	function updateMap(){
+		if(map){
+			let bounds = map.getBounds();
 
-	function getLocationData(){
-		const Http = new XMLHttpRequest();
-		const url = 'https://jsonplaceholder.typicode.com/posts';
-		Http.open("GET",url);
-		Http.send();
+			//JSON Object to send to server
+			if(bounds) {
+				let bbox = {
+		    		max_lng: bounds.ma.l,
+		    		min_lng: bounds.ma.j,
+		    		min_lat: bounds.ga.j,
+		    		max_lat: bounds.ga.l
+		    	};
 
-		Http.onreadystatechange=(e)=>{
-			return Http.responseText;
-		}
+
+		    	let locations = getPhotoData(bbox);
+		    }
+	    }
 	}
 
-	function drawMarkers(locations){
-		//debuggin
-		let test = [
-		{
-			lat: 52.2018816, 
-			lng: 0.1089536,
-			farm: 5,
-			server: 4906,
-			secret:  'cf53e2a5eb',
-			photoID: 31863524357,
-		}
-		];
 
-		let images = document.getElementById("image-preview");
+	//TODO
+	function getPhotoData(bbox){
+		const request = new XMLHttpRequest();
+		const requestURL = "https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+ API_KEY +"&bbox="+ bbox.min_lng +"%2C" + bbox.min_lat + "%2C" + bbox.max_lng + "%2C"+ bbox.max_lat +"&has_geo=1&format=json&nojsoncallback=1";
+		request.open("GET",requestURL,true);
+		
+		request.onload = function(){
+			photos = JSON.parse(this.response).photos.photo;
+			console.log("fetched " + photos.length + " photos");
+			handlePhotos(photos);
+		}
+		request.send();
+	}
+
+	function handlePhotos(photos){
+		let images = document.getElementById("images-panel");
 		images.innerHTML = null;
-		for(let i = 0; i < test.length; i++){
-
-			let location = {
-				lat: test[i].lat,
-				lng: test[i].lng
-			};
-
-			var point = new google.maps.Circle({
-				strokeColor: '#FF0000',
-				strokeOpacity: 0.8,
-				strokeWeight: 2,
-				fillColor: '#FF0000',
-				fillOpacity: 0.35,
-				map: map,
-				center: location,
-				radius: 50
-			});
-
-			handleImage(test[i],images);
+		for(let i = 0; i < photos.length; i++){
+			handleImage(photos[i],images, i < 20);
 		}
 	}
 
-	function handleImage(image,images){
-		//get information about photo
-		let url = "https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=c5ffff1a95a4ab5a9e440d76ad56f247&photo_id=" + image.photoID + "&secret=" + image.secret + "&format=json&nojsoncallback=1";
-
+	function handleImage(image,images,showInPreview){
+		let requestURL = "https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=c5ffff1a95a4ab5a9e440d76ad56f247&photo_id=" + image.id + "&secret=" + image.secret + "&format=json&nojsoncallback=1";
 		let request = new XMLHttpRequest();
-		request.open('GET',url,true);
+		request.open('GET',requestURL,true);
 
 		request.onload = function(){
 			let data = JSON.parse(this.response);
+			console.log(data);
+			let imagePage = "https://www.flickr.com/photos/" + data.photo.owner.nsid + "/"+ image.photoID +"/in/feed";
+			let imageSource = "'https://farm" + data.photo.farm+".staticflickr.com/"+
+			data.photo.server + "/" + data.photo.id + "_" + data.photo.secret+".jpg'";
+			if(showInPreview){
+				images.innerHTML += 
+				"<div class=\"image-container\" onclick=\"window.open('" + imagePage + "','mywindow');\">" + 
+				"<img id='" + image.photoID +
+				"'class=\"image-preview\" src=" + imageSource + ">" +  
+				"<div class=\"image-overlay\">" + 
+				"<p style=\"font-size:15px; margin:2px;\">" +
+				data.photo.owner.username + "</p>" + 
+				"<p style=\"font-size:12px; margin:2px;\">" +
+				data.photo.title._content + "</p>" + 
+				"</div>" +
+				"</div>";
+			}
 
-			let imageSource = "https://www.flickr.com/photos/" + data.photo.owner.nsid + "/"+ image.photoID +"/in/feed";
-			images.innerHTML += 
-			"<a class=\"image-container\" href=\"" + imageSource +
-			"\"target=\"_blank\"><img id='" + image.photoID +
-			"'width=\"100%\" src='https://farm" + 
-			image.farm+'.staticflickr.com/'+
-			image.server+'/'+image.photoID+'_'+
-			image.secret+'.jpg' + "'>" +  
-			"<div class=\"image-overlay\"><p style=\"font-size:15px;margin:2px;\">" +
-			data.photo.owner.username + "</p><p style=\"font-size:12px;margin:2px;\">" +
-			data.photo.title._content +
-			"</p></div>" +
-			"</a>";
+			// let latlngdata = {
+			// 	lat: parseFloat(data.photo.location.latitude),
+			// 	lng: parseFloat(data.photo.location.longitude)
+			// };
+
+			// console.log(latlngdata);
+
+			// let point = new google.maps.Circle({
+			// 	strokeColor: '#FF0000',
+			// 	strokeOpacity: 0.8,
+			// 	strokeWeight: 2,
+			// 	fillColor: '#FF0000',
+			// 	fillOpacity: 0.35,
+			// 	map: map,
+			// 	center: latlngdata,
+			// 	radius: 1000
+			// });
+
+			new google.maps.Marker({
+			    position: new google.maps.LatLng(parseFloat(data.photo.location.latitude),parseFloat(data.photo.location.longitude)),
+			    map: map,
+			    title: 'Hello World!'
+			});
 		}
 
 		request.send();
@@ -231,7 +248,7 @@
 
 	function handleSideBar(){
 		let navbar = document.getElementById("navbar").style;
-		let images = document.getElementById("image-preview").style;
+		let images = document.getElementById("images-panel").style;
 		let searchBar = document.getElementById("search-bar").style;
 		let searchSubmit = document.getElementById("search-submit").style;
 
