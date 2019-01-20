@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Phomo</title>
+	<link rel="stylesheet" 
+	href="https://fonts.googleapis.com/css?family=Raleway">
+	<style>
+	body {
+		padding: 0px;
+		margin: 0px;
+	}
+
+	#map {
+		height: 900px;
+		width: 100%;
+	}
+
+	#navbar {
+		position: absolute;
+		width: 30%;
+		max-width: 300px;
+		min-width: 200px;
+		height: 100%;
+		text-align: center;
+		margin: 0;
+		font-size: 50px;
+		font-family: 'Raleway', sans-serif;
+		box-shadow: 0px 1px 5px grey;
+		z-index: 999;
+		background-color: white;
+		padding: 10px;
+	}
+
+	#image-preview {
+		width:100%;
+	}
+
+	#navbar-button{
+		height: 30px;
+		width: 30px;
+	}
+
+	.container{
+		display: flex;
+		justify-content: space-around;
+	}
+</style>
+</head>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAF1LsdlbXpfEI1sx8WK4VqvMpbsKowHRE&libraries=visualization&callback=initMap" type="text/javascript"> </script>
+<div id="navbar">
+	<img id="navbar-button" src="http://www.contentformula.com/blog/wp-content/uploads/2016/06/hamburger-menu.png" onclick="handleSideBar()" />
+	<div id="image-preview"></div>
+</div>
+<div id="map"></div>
+<script type="text/javascript">
+	var map;
+	var sidebarClosed = false;
+
+	//Initiallize map with user's current location
+	if (navigator.geolocation) {
+		navigator.geolocation.getCurrentPosition(initMap);
+	} else { 
+		document.getElementById("map").innerHTML = "Geolocation is not supported by this browser.";
+	}
+
+	function initMap(position){
+		let location = {lat: 41.850033, lng: -87.6500523}; //defaults to center of America
+		if(position){
+			location = {
+				lat: position.coords.latitude,
+				lng: position.coords.longitude
+			};
+		}
+		
+		map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 15,
+          center: location,
+        });
+
+        google.maps.event.addListener(map, 'bounds_changed', function() {
+        	let bounds = map.getBounds();
+
+        	//JSON Object to send to server
+        	let halfWidth = bounds.ga.l - bounds.ga.j;
+        	let halfHeight = bounds.ma.l - bounds.ma.j
+        	let center = map.getCenter();
+
+        	let centerPoint = {
+        		lat: center.lat(),
+        		lng: center.lng()
+        	}
+
+        	let frameInfo = {
+        		center: centerPoint,
+        		halfWidth: halfWidth,
+        		halfHeight: halfHeight
+        	};
+
+        	//send to server
+        	console.log(frameInfo);
+
+        	//get the data
+	        let locations = getLocationData();
+	        drawMarkers(locations);
+        }); 
+	}
+
+	// google.maps.event.addListener(map, 'bounds_changed', function(){
+	// 	var bounds =  map.getBounds();
+	// 	let ne = bounds.getNorthEast();
+	// 	let sw = bounds.getSouthWest();
+	// 	console.log(ne);
+	// 	console.log(sw);
+	// });
+
+	function getLocationData(){
+		const Http = new XMLHttpRequest();
+		const url = 'https://jsonplaceholder.typicode.com/posts';
+		Http.open("GET",url);
+		Http.send();
+
+		Http.onreadystatechange=(e)=>{
+			return Http.responseText;
+		}
+	}
+
+	function drawMarkers(locations){
+		//debuggin
+		let test = [
+		{
+			lat: 52.2018816, 
+			lng: 0.1089536,
+			farm: 5,
+			server: 4906,
+			secret:  'cf53e2a5eb',
+			photoID: 31863524357,
+		}
+		];
+
+		let images = document.getElementById("image-preview");
+		images.innerHTML = null;
+		for(let i = 0; i < test.length; i++){
+			let location = {
+				lat: test[i].lat,
+				lng: test[i].lng
+			};
+
+			var point = new google.maps.Circle({
+				strokeColor: '#FF0000',
+				strokeOpacity: 0.8,
+				strokeWeight: 2,
+				fillColor: '#FF0000',
+				fillOpacity: 0.35,
+				map: map,
+				center: location,
+				radius: 50
+			});
+
+			// var marker = new google.maps.Marker({
+			// 	position: location,
+			// 	icon: 'http://www.get-emoji.com/images/emoji/1f534.png',
+			// 	map: map,
+			// 	size: 20
+			// });
+			showImage(test[i],images);
+		}
+	}
+
+	function showImage(photo,images){
+		let url = 'https://farm'+photo.farm+'.staticflickr.com/'+photo.server+'/'+photo.photoID+'_'+photo.secret+'.jpg';
+		images.innerHTML += "<img width=\"100%\" src='" + url + "'>";
+	}
+
+	function handleSideBar(){
+		let navbar = document.getElementById("navbar").style;
+		let images = document.getElementById("image-preview").style;
+
+		console.log(sidebarClosed);
+		if(sidebarClosed){
+			navbar.width = '30%';
+			navbar.minWidth = '200px';
+			images.display = 'flex';
+			sidebarClosed = false;
+		}else{
+			navbar.width = '40px';
+			images.display = 'none';
+			navbar.minWidth = '40px';
+			sidebarClosed = true;
+		}
+		
+	}
+
+</script>
+<body>
+
+</body>
+</html>
