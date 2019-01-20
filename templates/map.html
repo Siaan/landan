@@ -160,10 +160,17 @@
         map.addListener('zoom_changed', function() {
         	updateMap(map);
 		});
+
+		map.addListener('dragend', function() {
+        	updateMap(map);
+		});
+
+		google.maps.event.addListenerOnce(map, 'tilesloaded', function(){
+			updateMap(map);
+		});
 	}
 
 	function updateMap(map){
-		console.log('updating map');
 		if(map){
 			let bounds = map.getBounds();
 			photos = [];
@@ -190,8 +197,10 @@
 		request.open("GET",requestURL,true);
 		
 		request.onload = function(){
-			photos = JSON.parse(this.response).photos.photo;
-			handlePhotos(photos);
+			if(JSON.parse(this.response).photos){
+				photos = JSON.parse(this.response).photos.photo;
+				handlePhotos(photos);
+			}
 		}
 		request.send();
 	}
@@ -241,10 +250,9 @@
 		let latLng = new google.maps.LatLng(parseFloat(data.photo.location.longitude),parseFloat(data.photo.location.latitude));
 
 		let markerRadius = 15000/Math.pow(map.getZoom(),2);
-		console.log(markerRadius);
 		let marker = new google.maps.Circle({
 			strokeColor: '#FF0000',
-			strokeOpacity: 0.8,
+			strokeOpacity: 0.35,
 			strokeWeight: 2,
 			fillColor: '#FF0000',
 			fillOpacity: 0.35,
